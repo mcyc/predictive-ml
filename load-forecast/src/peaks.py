@@ -148,7 +148,7 @@ def get_monthly_maxima(df, target):
     return result
 
 
-def peak_distance_stats(df, target, quantiles=(0.90, 0.95, 0.98, 0.99)):
+def peak_distance_stats(df, target, quantiles=(0.90, 0.95, 0.98, 0.99), verbose=False):
     """
     Compute the distance from each quantile level to the monthly maximum.
 
@@ -168,6 +168,8 @@ def peak_distance_stats(df, target, quantiles=(0.90, 0.95, 0.98, 0.99)):
         Load column name.
     quantiles : tuple of float
         Quantile levels to evaluate. Default: (0.90, 0.95, 0.98, 0.99).
+    verbose : bool
+        Whether not to print the result. Defalut: False
 
     Returns
     -------
@@ -196,8 +198,9 @@ def peak_distance_stats(df, target, quantiles=(0.90, 0.95, 0.98, 0.99)):
         })
 
     result = pd.DataFrame(records).set_index("quantile")
-    print("\n── Distance from quantile to monthly maximum ──")
-    print(result.round(2).to_string())
+    if verbose:
+        print("\n── Distance from quantile to monthly maximum ──")
+        print(result.round(2).to_string())
     return result
 
 
@@ -476,43 +479,58 @@ def plot_temporal_profile(profile, figsize=(15, 9)):
     return fig
 
 
-def plot_peak_distance(distance_stats, figsize=(10, 5)):
+def plot_peak_distance(df, target, figsize=(10, 5), quantile_range=(0.95, 1.0)):
     """
-    Plot the mean and max gap (MW) between each quantile level and
-    the monthly maximum, to visualise how much headroom each alpha provides.
+    Plot the mean and max gap (MW and %) between each quantile level and
+    the monthly maximum as line plots over a fine quantile grid.
 
     Parameters
     ----------
-    distance_stats : pd.DataFrame
-        Output of peak_distance_stats().
+    df : pd.DataFrame
+        Feature-engineered DataFrame with DatetimeIndex.
+    target : str
+        Load column name.
     figsize : tuple
+    quantile_range : tuple of (float, float)
+        Range of quantile levels to plot. Default: (0.90, 1.0).
 
     Returns
     -------
-    fig, ax
+    fig, axes
     """
+
+    q_min, q_max = quantile_range
+    range_width  = q_max - q_min
+    step         = max(2e-4, range_width / 50)
+    quantiles    = np.arange(q_min, q_max + step / 2, step).clip(0, 1)
+    quantiles    = np.unique(np.append(quantiles, 1.0))  # ensure Q100 endpoint
+    ref = peak_distance_stats(df, target=target, quantiles=quantiles)
+
+    if len(quantiles) < 10:
+        print(f"  Note: only {len(quantiles)} quantile points in range "
+              f"({q_min:.3f}, {q_max:.3f}) — consider widening quantile_range.")
+
+    # scale it to percent
+    ref.index = ref.index*100
+
     fig, axes = plt.subplots(1, 2, figsize=figsize)
     fig.suptitle("Gap Between Quantile Level and Monthly Maximum", fontsize=12)
 
-    quantile_labels = [f"Q{int(q*100)}" for q in distance_stats.index]
-    x = range(len(quantile_labels))
-
     for ax, col_mean, col_max, ylabel, title in [
-        (axes[0], "gap_mw_mean",  "gap_mw_max",
-         "Gap (MW)",  "Gap in MW"),
-        (axes[1], "gap_pct_mean", "gap_pct_max",
-         "Gap (%)",   "Gap as % of Monthly Max"),
+        (axes[0], "gap_mw_mean",  "gap_mw_max",  "Gap (MW)", "Gap in MW"),
+        (axes[1], "gap_pct_mean", "gap_pct_max", "Gap (%)",  "Gap as % of Monthly Max"),
     ]:
-        ax.bar([i - 0.2 for i in x], distance_stats[col_mean],
-               width=0.35, label="Mean gap", color="#2196F3", alpha=0.8)
-        ax.bar([i + 0.2 for i in x], distance_stats[col_max],
-               width=0.35, label="Max gap",  color="#FF5722", alpha=0.8)
-        ax.set_xticks(list(x))
-        ax.set_xticklabels(quantile_labels)
+        ax.plot(ref.index, ref[col_mean], color="#2196F3", linewidth=2,
+                label="Mean gap")
+        ax.plot(ref.index, ref[col_max],  color="#FF5722", linewidth=2,
+                label="Max gap")
+        ax.fill_between(ref.index, ref[col_mean], ref[col_max],
+                        alpha=0.12, color="#9C27B0")
+        ax.set_xlabel("Quantile level (alpha)")
         ax.set_ylabel(ylabel)
         ax.set_title(title)
         ax.legend()
-        ax.grid(axis="y", alpha=0.35)
+        ax.grid(alpha=0.35)
 
     plt.tight_layout()
     return fig, axes
