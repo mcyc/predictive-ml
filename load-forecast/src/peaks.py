@@ -44,7 +44,7 @@ __notebook__ = "04"
 
 # ── Public API ────────────────────────────────────────────────────────────────
 
-def label_monthly_peaks(df, threshold=0.90, target="north_clean"):
+def label_monthly_peaks(df, target, threshold=0.90):
     """
     Assign a binary peak label: 1 if the hour is in the top (1-threshold)
     fraction of load within its calendar month, 0 otherwise.
@@ -56,10 +56,10 @@ def label_monthly_peaks(df, threshold=0.90, target="north_clean"):
     ----------
     df : pd.DataFrame
         Feature-engineered DataFrame with DatetimeIndex.
+    target : str
+        Load column name.
     threshold : float
         Quantile above which an hour is labelled as peak. Default: 0.90.
-    target : str
-        Load column name. Default: 'north_clean'.
 
     Returns
     -------
@@ -74,7 +74,7 @@ def label_monthly_peaks(df, threshold=0.90, target="north_clean"):
     return peak
 
 
-def label_monthly_rank(df, target="north_clean"):
+def label_monthly_rank(df, target):
     """
     Compute the fractional rank of each hour within its calendar month.
 
@@ -89,7 +89,7 @@ def label_monthly_rank(df, target="north_clean"):
     df : pd.DataFrame
         Feature-engineered DataFrame with DatetimeIndex.
     target : str
-        Load column name. Default: 'north_clean'.
+        Load column name.
 
     Returns
     -------
@@ -104,7 +104,7 @@ def label_monthly_rank(df, target="north_clean"):
     return rank
 
 
-def get_monthly_maxima(df, target="north_clean"):
+def get_monthly_maxima(df, target):
     """
     Return the monthly maximum load value and its timestamp for each month.
 
@@ -113,7 +113,7 @@ def get_monthly_maxima(df, target="north_clean"):
     df : pd.DataFrame
         Feature-engineered DataFrame with DatetimeIndex.
     target : str
-        Load column name. Default: 'north_clean'.
+        Load column name.
 
     Returns
     -------
@@ -149,7 +149,7 @@ def get_monthly_maxima(df, target="north_clean"):
 
 
 def peak_distance_stats(df, quantiles=(0.90, 0.95, 0.98, 0.99),
-                        target="north_clean"):
+                        target):
     """
     Compute the distance from each quantile level to the monthly maximum.
 
@@ -168,7 +168,7 @@ def peak_distance_stats(df, quantiles=(0.90, 0.95, 0.98, 0.99),
     quantiles : tuple of float
         Quantile levels to evaluate. Default: (0.90, 0.95, 0.98, 0.99).
     target : str
-        Load column name. Default: 'north_clean'.
+        Load column name.
 
     Returns
     -------
@@ -202,7 +202,7 @@ def peak_distance_stats(df, quantiles=(0.90, 0.95, 0.98, 0.99),
     return result
 
 
-def peak_duration_analysis(df, target="north_clean", threshold=0.95,
+def peak_duration_analysis(df, target, threshold=0.95,
                            window_hours=6):
     """
     Characterise whether monthly maxima are isolated spikes or part of
@@ -218,7 +218,7 @@ def peak_duration_analysis(df, target="north_clean", threshold=0.95,
     df : pd.DataFrame
         Feature-engineered DataFrame with DatetimeIndex.
     target : str
-        Load column name. Default: 'north_clean'.
+        Load column name.
     threshold : float
         Quantile level defining 'high load'. Default: 0.95.
     window_hours : int
@@ -264,7 +264,7 @@ def peak_duration_analysis(df, target="north_clean", threshold=0.95,
     return result
 
 
-def peak_temporal_profile(df, target="north_clean", threshold=0.90):
+def peak_temporal_profile(df, target, threshold=0.90):
     """
     Analyse the hour-of-day, weekday, and month-of-year distributions
     of peak hours and monthly maxima.
@@ -274,7 +274,7 @@ def peak_temporal_profile(df, target="north_clean", threshold=0.90):
     df : pd.DataFrame
         Feature-engineered DataFrame with DatetimeIndex.
     target : str
-        Load column name. Default: 'north_clean'.
+        Load column name.
     threshold : float
         Quantile threshold defining peak hours. Default: 0.90.
 
@@ -314,7 +314,7 @@ def peak_temporal_profile(df, target="north_clean", threshold=0.90):
     return result
 
 
-def empirical_alpha(df, target="north_clean",
+def empirical_alpha(df, target,
                     quantiles=None):
     """
     Compute the minimum quantile level that would have bounded every monthly
@@ -331,7 +331,7 @@ def empirical_alpha(df, target="north_clean",
     df : pd.DataFrame
         Feature-engineered DataFrame with DatetimeIndex.
     target : str
-        Load column name. Default: 'north_clean'.
+        Load column name.
     quantiles : list of float or None
         Alpha levels to evaluate coverage for. Default: [0.90, 0.95, 0.98, 0.99].
 
