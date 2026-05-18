@@ -148,8 +148,7 @@ def get_monthly_maxima(df, target):
     return result
 
 
-def peak_distance_stats(df, quantiles=(0.90, 0.95, 0.98, 0.99),
-                        target):
+def peak_distance_stats(df, target, quantiles=(0.90, 0.95, 0.98, 0.99)):
     """
     Compute the distance from each quantile level to the monthly maximum.
 
@@ -165,10 +164,10 @@ def peak_distance_stats(df, quantiles=(0.90, 0.95, 0.98, 0.99),
     ----------
     df : pd.DataFrame
         Feature-engineered DataFrame with DatetimeIndex.
-    quantiles : tuple of float
-        Quantile levels to evaluate. Default: (0.90, 0.95, 0.98, 0.99).
     target : str
         Load column name.
+    quantiles : tuple of float
+        Quantile levels to evaluate. Default: (0.90, 0.95, 0.98, 0.99).
 
     Returns
     -------
@@ -314,8 +313,7 @@ def peak_temporal_profile(df, target, threshold=0.90):
     return result
 
 
-def empirical_alpha(df, target,
-                    quantiles=None):
+def empirical_alpha(df, target, quantiles=None):
     """
     Compute the minimum quantile level that would have bounded every monthly
     maximum in the dataset.
