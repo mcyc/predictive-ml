@@ -25,7 +25,7 @@ Main functions:
         sustained high-load periods.
 
     peak_temporal_profile(df, target, threshold)
-        Hour-of-day and month-of-year distributions of peak hours.
+        Hour-of-day and month-of-year distributions of peak time slots.
 
     empirical_alpha(df, target)
         Minimum quantile level that would have bounded every monthly
@@ -46,7 +46,7 @@ __notebook__ = "04"
 
 def label_monthly_peaks(df, target, threshold=0.90):
     """
-    Assign a binary peak label: 1 if the hour is in the top (1-threshold)
+    Assign a binary peak label: 1 if the time slot is in the top (1-threshold)
     fraction of load within its calendar month, 0 otherwise.
 
     Uses year + month grouping so each month's threshold is computed
@@ -59,7 +59,7 @@ def label_monthly_peaks(df, target, threshold=0.90):
     target : str
         Load column name.
     threshold : float
-        Quantile above which an hour is labelled as peak. Default: 0.90.
+        Quantile above which a time slot is labelled as peak. Default: 0.90.
 
     Returns
     -------
@@ -76,13 +76,13 @@ def label_monthly_peaks(df, target, threshold=0.90):
 
 def label_monthly_rank(df, target):
     """
-    Compute the fractional rank of each hour within its calendar month.
+    Compute the fractional rank of each time slot within its calendar month.
 
     Rank 1.0 = monthly maximum. Rank 0.0 = monthly minimum.
     Ties are averaged (method='average').
 
     This label is more informative than binary peak/non-peak for training
-    sample-weighted models that should prioritise hours near the maximum.
+    sample-weighted models that should prioritise time slot near the maximum.
 
     Parameters
     ----------
@@ -121,7 +121,7 @@ def get_monthly_maxima(df, target):
         Indexed by (year, month) with columns:
             max_load  : float, monthly maximum load (MW)
             timestamp : pd.Timestamp, time of the monthly maximum
-            hour      : int, hour of day of the maximum
+            hour      : int, hour of day of the maximum time slot
             month     : int, calendar month
             year      : int, calendar year
     """
@@ -201,16 +201,16 @@ def peak_distance_stats(df, target, quantiles=(0.90, 0.95, 0.98, 0.99)):
     return result
 
 
-def peak_duration_analysis(df, target, threshold=0.95,
-                           window_hours=6):
+def peak_duration_analysis(df, target, threshold=0.95, window_hours=6):
     """
     Characterise whether monthly maxima are isolated spikes or part of
     sustained high-load periods.
 
-    For each month, counts how many hours within `window_hours` of the
-    monthly maximum also exceed the monthly `threshold` quantile. A count
-    of 1 (only the maximum itself) indicates an isolated spike; a higher
-    count indicates a sustained peak period.
+    For each month, counts how many time slots within a ±window_hours
+    wall-clock window of the monthly maximum also exceed the monthly
+    `threshold` quantile. A count of 1 (only the maximum time slot itself)
+    indicates an isolated spike; a higher count indicates a sustained
+    peak period.
 
     Parameters
     ----------
@@ -221,14 +221,15 @@ def peak_duration_analysis(df, target, threshold=0.95,
     threshold : float
         Quantile level defining 'high load'. Default: 0.95.
     window_hours : int
-        Hours before and after the monthly maximum to inspect. Default: 6.
+        Wall-clock hours before and after the monthly maximum to inspect.
+        Default: 6.
 
     Returns
     -------
     pd.DataFrame
         One row per month with columns:
-            max_load, max_timestamp, n_high_hours_in_window,
-            is_isolated (bool: True if n_high_hours_in_window == 1)
+            max_load, max_timestamp, n_high_slots_in_window,
+            is_isolated (bool: True if n_high_slots_in_window == 1)
     """
     records = []
     for (year, month), grp in df.groupby([df.index.year, df.index.month]):
@@ -248,18 +249,18 @@ def peak_duration_analysis(df, target, threshold=0.95,
             "month"                  : month,
             "max_load"               : monthly_max,
             "max_timestamp"          : idx_max,
-            "n_high_hours_in_window" : int(n_high),
+            "n_high_slots_in_window" : int(n_high),
             "is_isolated"            : (n_high == 1),
         })
 
     result = pd.DataFrame(records).set_index(["year", "month"])
 
     isolated_pct = result["is_isolated"].mean() * 100
-    mean_window  = result["n_high_hours_in_window"].mean()
+    mean_window  = result["n_high_slots_in_window"].mean()
     print(f"\n── Peak Duration Analysis (threshold={threshold}, window=±{window_hours}h) ──")
-    print(f"  Isolated spikes (only max hour above threshold): {isolated_pct:.1f}% of months")
-    print(f"  Mean high-load hours in window: {mean_window:.1f}")
-    print(f"  Max high-load hours in window:  {result['n_high_hours_in_window'].max()}")
+    print(f"  Isolated spikes (only max time slot above threshold): {isolated_pct:.1f}% of months")
+    print(f"  Mean high-load time slots in window: {mean_window:.1f}")
+    print(f"  Max high-load time slots in window:  {result['n_high_slots_in_window'].max()}")
     return result
 
 
@@ -275,14 +276,14 @@ def peak_temporal_profile(df, target, threshold=0.90):
     target : str
         Load column name.
     threshold : float
-        Quantile threshold defining peak hours. Default: 0.90.
+        Quantile threshold defining peak time slots. Default: 0.90.
 
     Returns
     -------
     dict with keys:
-        'hour_dist'    : pd.Series — count of peak hours by hour of day
-        'weekday_dist' : pd.Series — count of peak hours by weekday
-        'month_dist'   : pd.Series — count of peak hours by calendar month
+        'hour_dist'    : pd.Series — count of peak time slots by hour of day
+        'weekday_dist' : pd.Series — count of peak time slots by weekday
+        'month_dist'   : pd.Series — count of peak time slots by calendar month
         'max_hour_dist': pd.Series — count of monthly maxima by hour of day
         'max_month_dist': pd.Series — count of monthly maxima by calendar month
     """
@@ -448,7 +449,7 @@ def plot_temporal_profile(profile, figsize=(15, 9)):
 
     plot_specs = [
         # (row, col, data_key, title, xlabel, color)
-        (0, 0, "hour_dist",      "Peak Hours by Hour of Day",  "Hour",    "#2196F3"),
+        (0, 0, "hour_dist",      "Peak Time Slots by Hour of Day",  "Hour",    "#2196F3"),
         (0, 1, "weekday_dist",   "Peak Hours by Weekday",      "Weekday", "#2196F3"),
         (0, 2, "month_dist",     "Peak Hours by Month",        "Month",   "#2196F3"),
         (1, 0, "max_hour_dist",  "Monthly Max by Hour of Day", "Hour",    "#FF5722"),
@@ -536,10 +537,10 @@ def plot_duration_distribution(duration_df, figsize=(10, 4)):
     fig.suptitle("Peak Duration — Are Monthly Maxima Isolated Spikes?",
                  fontsize=12)
 
-    counts = duration_df["n_high_hours_in_window"].value_counts().sort_index()
+    counts = duration_df["n_high_slots_in_window"].value_counts().sort_index()
     axes[0].bar(counts.index, counts.values, color="#9C27B0", alpha=0.8,
                 edgecolor="white")
-    axes[0].set_xlabel("High-load hours in ±6h window around monthly max")
+    axes[0].set_xlabel("High-load time slots in ±6h window around monthly max")
     axes[0].set_ylabel("Number of months")
     axes[0].set_title("Distribution of Peak Window Width")
     axes[0].grid(axis="y", alpha=0.35)
