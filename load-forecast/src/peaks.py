@@ -307,9 +307,9 @@ def peak_temporal_profile(df, target="north_clean", threshold=0.90):
         "month_dist"    : (pd.Series(month_dist).value_counts()
                              .sort_index()
                              .rename(index=dict(enumerate(month_names, 1)))),
-        "max_hour_dist" : maxima["hour"].value_counts().sort_index(),
-        "max_month_dist": maxima["month"].value_counts().sort_index()
-                            .rename(index=dict(enumerate(month_names, 1))),
+        "max_hour_dist": maxima["hour"].value_counts().sort_index(),
+        "max_month_dist": maxima.reset_index()["month"].value_counts().sort_index()
+        .rename(index=dict(enumerate(month_names, 1))),
     }
     return result
 
